@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authrator - Google Authentication</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(to bottom right, #000000, #3b0764, #000000);
+            color: white;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .container {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: rgba(147, 51, 234, 0.2);
+            border-radius: 50%;
+            filter: blur(100px);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+        }
+        
+        .particle {
+            position: absolute;
+            background-color: rgba(147, 51, 234, 0.3);
+            border-radius: 50%;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        p {
+            margin-bottom: 2rem;
+            opacity: 0.8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        #login-container {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #9333ea;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #status-message {
+            margin-top: 1.5rem;
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="glow"></div>
+        <h1>Authrator</h1>
+        <p>
+            To continue with Google authentication, click the button below.
+            After signing in with Google, you will be redirected back to the app.
+        </p>
+        
+        <div id="login-container">
+            <div id="g_id_onload"
+                data-client_id="976765633681-2fct57jpqv111tfb5sroeqcqcakenk9c.apps.googleusercontent.com"
+                data-callback="handleCredentialResponse"
+                data-context="signin"
+                data-ux_mode="popup"
+                data-auto_prompt="true">
+            </div>
+            
+            <div class="g_id_signin"
+                data-type="standard"
+                data-size="large"
+                data-theme="outline"
+                data-text="signin_with"
+                data-shape="rectangular"
+                data-logo_alignment="left">
+            </div>
+        </div>
+        
+        <p id="status-message"></p>
+    </div>
+    
+    <!-- Create particles for background effect -->
+    <script>
+        // Create particles
+        for (let i = 0; i < 20; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            const size = Math.random() * 10 + 2;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            document.body.appendChild(particle);
+        }
+        
+        // Handle Google sign-in response
+        function handleCredentialResponse(response) {
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.textContent = 'Authenticating...';
+            
+            if (response && response.credential) {
+                // Redirect to the auth-redirect.html page with the credential
+                window.location.href = `https://authrator.com/auth-redirect.html?credential=${response.credential}`;
+            } else {
+                statusMessage.textContent = 'Authentication failed. Please try again.';
+            }
+        }
+    </script>
+</body>
+</html> 

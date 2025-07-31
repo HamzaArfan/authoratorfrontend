@@ -1,0 +1,22 @@
+[
+    {
+      "id": "jwt1",
+      "name": "Development Environment",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "pairs": [
+        { "key": "sub", "value": "1234567890" },
+        { "key": "name", "value": "Dev User" },
+        { "key": "role", "value": "developer" }
+      ]
+    },
+    {
+      "id": "jwt2",
+      "name": "Production Environment",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "pairs": [
+        { "key": "sub", "value": "9876543210" },
+        { "key": "name", "value": "Prod User" },
+        { "key": "role", "value": "admin" }
+      ]
+    }
+  ]

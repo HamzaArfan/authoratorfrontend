@@ -1,0 +1,351 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Motter Tektura';
+  src: url('../assets/Motter Tektura Normal.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Custom styling for a more compact and aesthetic dashboard */
+.dashboard-compact {
+  /* Base font size reduction */
+  font-size: 0.95rem;
+}
+
+/* Make the sidebar slightly more compact */
+.dashboard-compact .sidebar {
+  width: 260px !important;
+}
+
+/* Adjust button sizes */
+.dashboard-compact button,
+.dashboard-compact .btn,
+.dashboard-compact select {
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Make inputs more compact */
+.dashboard-compact input,
+.dashboard-compact textarea,
+.dashboard-compact select {
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Adjust table cells and rows */
+.dashboard-compact td,
+.dashboard-compact th {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Reduce padding in panels and cards */
+.dashboard-compact .panel,
+.dashboard-compact .card {
+  padding: 0.75rem !important;
+}
+
+/* Make tabs more compact */
+.dashboard-compact .tab {
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Header elements should be slightly smaller */
+.dashboard-compact h1 {
+  font-size: 1.5rem !important;
+}
+.dashboard-compact h2 {
+  font-size: 1.3rem !important;
+}
+.dashboard-compact h3 {
+  font-size: 1.1rem !important;
+}
+.dashboard-compact h4,
+.dashboard-compact h5,
+.dashboard-compact h6 {
+  font-size: 1rem !important;
+}
+
+/* Adjust borders and spacing */
+.dashboard-compact .space-y-2 {
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.dashboard-compact .space-x-2 > * {
+  margin-left: 0.4rem !important;
+  margin-right: 0.4rem !important;
+}
+
+/* Reduce size of icons */
+.dashboard-compact svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+/* Adjust sidebar and main panel proportions */
+.dashboard-compact .resizable-box {
+  min-width: 220px !important;
+}
+
+/* API Tabs styling */
+.dashboard-compact [role="tablist"] {
+  height: 2.5rem !important;
+}
+
+.dashboard-compact [role="tab"] {
+  padding: 0.3rem 0.75rem !important;
+  font-size: 0.8rem !important;
+}
+
+/* Method selection dropdown */
+.dashboard-compact select[value="GET"],
+.dashboard-compact select[value="POST"],
+.dashboard-compact select[value="PUT"],
+.dashboard-compact select[value="DELETE"],
+.dashboard-compact select[value="PATCH"] {
+  padding: 0.3rem 0.6rem !important;
+  font-size: 0.8rem !important;
+}
+
+/* URL input field */
+.dashboard-compact input[placeholder="Enter request URL"] {
+  padding: 0.35rem 0.7rem !important;
+  font-size: 0.85rem !important;
+  height: 2.2rem !important;
+}
+
+/* Request headers, params, and body sections */
+.dashboard-compact .space-y-3 {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Adjust header height */
+.dashboard-compact header {
+  height: 2.75rem !important;
+}
+
+/* Make the response panel more compact */
+.dashboard-compact .response-panel {
+  padding: 0.5rem !important;
+}
+
+/* Tabs in request panel */
+.dashboard-compact .tab-list button {
+  padding: 0.4rem 0.75rem !important;
+  font-size: 0.8rem !important;
+}
+
+/* Sidebar navigation buttons */
+.dashboard-compact .w-14 button {
+  padding: 0.5rem !important;
+}
+
+/* Collection items in sidebar */
+.dashboard-compact .collections-list div {
+  padding-top: 0.3rem !important;
+  padding-bottom: 0.3rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* Collection folder items */
+.dashboard-compact .folder-item {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+  font-size: 0.85rem !important;
+}
+
+/* API items in folders */
+.dashboard-compact .api-item {
+  padding-top: 0.3rem !important;
+  padding-bottom: 0.3rem !important;
+  font-size: 0.8rem !important;
+  margin-left: 0.75rem !important;
+}
+
+/* Response body styling */
+.dashboard-compact .response-body {
+  font-size: 0.8rem !important;
+  line-height: 1.4 !important;
+}
+
+/* Response headers styling */
+.dashboard-compact .response-headers {
+  font-size: 0.8rem !important;
+}
+
+/* JSON/XML formatting */
+.dashboard-compact pre {
+  font-size: 0.8rem !important;
+  line-height: 1.3 !important;
+}
+
+/* Send button */
+.dashboard-compact .send-button {
+  padding: 0.35rem 0.7rem !important;
+  font-size: 0.8rem !important;
+}
+
+/* Improve spacing between sections */
+.dashboard-compact .p-4 {
+  padding: 0.75rem !important;
+}
+
+.dashboard-compact .p-3 {
+  padding: 0.6rem !important;
+}
+
+/* Reduce the height of the response tabs */
+.dashboard-compact .response-tabs {
+  height: 2.25rem !important;
+}
+
+/* Improved scrollbars for a cleaner look */
+.dashboard-compact ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dashboard-compact ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.dashboard-compact ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.dashboard-compact.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dashboard-compact.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* API Tabs scrollbar styling */
+.api-tabs-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.api-tabs-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.api-tabs-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 10px;
+}
+
+.dark .api-tabs-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(82, 82, 91, 0.6);
+}
+
+/* Ensure API tabs don't shrink below their fixed width */
+.api-tabs-scrollbar > div {
+  flex-shrink: 0;
+  min-width: 200px;
+}
+
+/* Add vertical guide styling for enhanced JSON viewer */
+.relative {
+  position: relative;
+}
+
+/* Add styles to make the JSON viewer look professional */
+.enhanced-json-viewer {
+  font-family: 'JetBrains Mono', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background-color: transparent;
+}
+
+/* Line numbers container */
+.json-line-numbers {
+  user-select: none;
+  text-align: right;
+  padding-right: 8px;
+  border-right: 1px solid rgb(229, 231, 235);
+  margin-right: 8px;
+  color: rgb(156, 163, 175);
+  min-width: 40px;
+  position: sticky;
+  left: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+}
+
+/* Individual line number */
+.json-line-number {
+  height: 1.5rem; /* Match line height */
+  padding-right: 4px;
+}
+
+/* Add guide lines for JSON nesting */
+.json-guide-line {
+  position: absolute;
+  width: 1px;
+  background-color: rgba(156, 163, 175, 0.2);
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* Collapsible controls styling */
+.json-collapse-control {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Dark mode adjustments */
+.dark .json-line-numbers {
+  color: rgb(156, 163, 175);
+  border-right-color: rgb(63, 63, 70);
+  background-color: rgba(24, 24, 27, 0.8);
+}
+
+.dark .json-guide-line {
+  background-color: rgba(156, 163, 175, 0.1);
+}
+
+/* Custom scrollbar styling for the Response section */
+.response-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.response-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.response-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #AB47BC; /* pink-500 @ 40% */
+  border-radius: 4px;
+}
+
+/* Intensify the pink when the user is actively hovering in the area */
+.response-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: #AB47BC; /* pink-500 */
+}
+
+/* Dark-mode adjustments */
+.dark .response-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .response-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(236, 72, 153, 0.6);
+}
+

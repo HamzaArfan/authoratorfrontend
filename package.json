@@ -1,0 +1,114 @@
+{
+  "name": "authrator",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "./",
+  "main": "build/electron.js",
+  "dependencies": {
+    "@react-oauth/google": "^0.12.1",
+    "axios": "^1.7.9",
+    "chart.js": "^4.4.2",
+    "cors": "^2.8.5",
+    "cra-template": "1.2.0",
+    "electron-log": "^5.3.3",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.6.2",
+    "express": "^4.21.2",
+    "form-data": "^4.0.1",
+    "gsap": "^3.12.7",
+    "jspdf": "^3.0.0",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.471.0",
+    "node-fetch": "^2.7.0",
+    "node-forge": "^1.3.1",
+    "react": "^19.0.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^19.0.0",
+    "react-helmet": "^6.1.0",
+    "react-resizable": "^3.0.5",
+    "react-router": "^7.1.1",
+    "react-router-dom": "^7.1.1",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.15.0",
+    "xml-js": "^1.6.11"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build && cpy public/electron.js public/auth-redirect.html public/auth-electron.html build/",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "electron": "electron .",
+    "dist": "npm run build && electron-builder --win portable "
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "assert": "^2.1.0",
+    "buffer": "^6.0.3",
+    "cpy-cli": "^5.0.0",
+    "crypto-browserify": "^3.12.1",
+    "electron": "^33.4.1",
+    "electron-builder": "^24.13.3",
+    "https-browserify": "^1.0.0",
+    "os-browserify": "^0.3.0",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "tailwindcss": "^3.4.17",
+    "url": "^0.11.4",
+    "util": "^0.12.5"
+  },
+  "build": {
+    "appId": "com.authrator.app",
+    "productName": "Authrator",
+    "protocols": {
+      "name": "authrator",
+      "schemes": [
+        "authrator"
+      ]
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false,
+      "publisherName": "Authrator"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.png",
+      "category": "public.app-category.developer-tools"
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}.dmg"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.exe"
+    },
+    "files": [
+      "build/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    }
+  }
+}
