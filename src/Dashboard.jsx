@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings,Check, Trash, AlertTriangle, Clock,Send, Folder,Menu, Plus,Search,Edit2, X, ChevronDown, Save ,Sun,Moon, PlusCircle, FolderClosed, FolderPlus, Database, Lock, Code, CodeSquare, Circle, ExternalLink, ArrowUpDown, Download, Upload, Copy, Trash2, Pencil, MoreVertical, Play, Terminal, FolderCheckIcon, HistoryIcon, Info, MessageSquare, Wifi, KeyRound, Cookie, MousePointer2, Antenna, Rotate3d, TerminalSquare, Dot, MoreHorizontal, LayoutTemplate, DatabaseZapIcon, CloudLightningIcon, Atom, ZapIcon, Globe, Key, AlertCircle, FileX, ShieldCheck, ChevronRight, ChevronLeft, Settings2, HelpCircle, Book, Mail } from 'lucide-react';
+import { Settings,Check, Trash, AlertTriangle, Clock,Send, Folder,Menu, Plus,Search,Edit2, X, ChevronDown, Save ,Sun,Moon, PlusCircle, FolderClosed, FolderPlus, Database, Lock, Code, CodeSquare, Circle, ExternalLink, ArrowUpDown, Download, Upload, Copy, Trash2, Pencil, MoreVertical, Play, Terminal, FolderCheckIcon, HistoryIcon, Info, MessageSquare, Wifi, WifiOff, KeyRound, Cookie, MousePointer2, Antenna, Rotate3d, TerminalSquare, Dot, MoreHorizontal, LayoutTemplate, DatabaseZapIcon, CloudLightningIcon, Atom, ZapIcon, Globe, Key, AlertCircle, FileX, ShieldCheck, ChevronRight, ChevronLeft, Settings2, HelpCircle, Book, Mail } from 'lucide-react';
 import ResponseAnalytics from './ResponseAnalytics';
 import logo from "./imgpsh.png"
 import EnvironmentManager from './EnvironmentManager';
@@ -28,6 +28,150 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://authrator.co
 
 const createDebouncedUpdate = (updateFn) => {
   return debounce(updateFn, 5000, { maxWait: 5000 });
+};
+
+// Functions for localStorage persistence of default header settings
+const saveDefaultHeaderSettings = (settings) => {
+  try {
+    localStorage.setItem('authrator_default_header_settings', JSON.stringify(settings));
+  } catch (error) {
+    console.error('Failed to save default header settings:', error);
+  }
+};
+
+const loadDefaultHeaderSettings = () => {
+  try {
+    const savedSettings = localStorage.getItem('authrator_default_header_settings');
+    if (savedSettings) {
+      return JSON.parse(savedSettings);
+    }
+  } catch (error) {
+    console.error('Failed to load default header settings:', error);
+  }
+  // Return default settings if none saved or error occurred
+  return {
+    enableUserAgent: true,
+    enableCacheControl: true,
+    enableConnection: true
+  };
+};
+
+// Function to get default headers that should be added to every API request (like Postman)
+const getDefaultHeaders = () => [
+  { key: 'User-Agent', value: 'Authrator-Client' },
+  { key: 'Cache-Control', value: 'no-cache' },
+  { key: 'Connection', value: 'keep-alive' }
+];
+
+// Function to get enabled default headers based on settings
+const getEnabledDefaultHeaders = (settings) => {
+  // If no settings provided, use localStorage settings
+  const finalSettings = settings && Object.keys(settings).length > 0 ? settings : loadDefaultHeaderSettings();
+  const allDefaults = getDefaultHeaders();
+  return allDefaults.filter(header => {
+    switch(header.key) {
+      case 'User-Agent':
+        return finalSettings?.enableUserAgent !== false; // Default enabled
+      case 'Cache-Control':
+        return finalSettings?.enableCacheControl !== false; // Default enabled
+      case 'Connection':
+        return finalSettings?.enableConnection !== false; // Default enabled
+      default:
+        return true;
+    }
+  });
+};
+
+// Function to ensure API has all enabled default headers
+const ensureApiHasDefaultHeaders = (existingHeaders, settings = {}) => {
+  const headers = [...existingHeaders];
+  const headerKeys = headers.map(h => h.key.toLowerCase());
+  
+  // If no settings provided, use localStorage settings
+  const finalSettings = settings && Object.keys(settings).length > 0 ? settings : loadDefaultHeaderSettings();
+  
+  // Add enabled default headers if they don't already exist
+  const enabledDefaults = getEnabledDefaultHeaders(finalSettings);
+  enabledDefaults.forEach(defaultHeader => {
+    if (!headerKeys.includes(defaultHeader.key.toLowerCase())) {
+      headers.push(defaultHeader);
+    }
+  });
+  
+  return headers;
+};
+
+// Function to get appropriate Content-Type based on body type and format
+const getContentTypeForBody = (bodyType, rawFormat = 'json') => {
+  switch (bodyType) {
+    case 'raw':
+      switch (rawFormat) {
+        case 'json':
+          return 'application/json';
+        case 'xml':
+          return 'application/xml';
+        case 'text':
+          return 'text/plain';
+        default:
+          return 'application/json';
+      }
+    case 'formData':
+      return 'multipart/form-data';
+    case 'urlencoded':
+      return 'application/x-www-form-urlencoded';
+    default:
+      return null;
+  }
+};
+
+// Function to manage Content-Type header based on body configuration
+const manageContentTypeHeader = (headers, body) => {
+  const newHeaders = [...headers];
+  const contentTypeIndex = newHeaders.findIndex(h => h.key.toLowerCase() === 'content-type');
+  const requiredContentType = getContentTypeForBody(body.type, body.rawFormat);
+  
+  // Check if body has meaningful content
+  const hasContent = body.type !== 'none' && (
+    (body.type === 'raw' && body.content?.trim()) ||
+    (body.type === 'formData' && body.formData?.some(item => item.key?.trim() || item.value?.trim())) ||
+    (body.type === 'urlencoded' && body.urlencoded?.some(item => item.key?.trim() || item.value?.trim()))
+  );
+  
+  // If body type is 'none' or has no meaningful content, remove Content-Type header if it exists
+  if (!hasContent) {
+    if (contentTypeIndex !== -1) {
+      newHeaders.splice(contentTypeIndex, 1);
+    }
+    return newHeaders;
+  }
+  
+  // If we need a Content-Type header and body has content
+  if (requiredContentType) {
+    if (contentTypeIndex !== -1) {
+      // Update existing Content-Type header
+      newHeaders[contentTypeIndex].value = requiredContentType;
+    } else {
+      // Add new Content-Type header
+      newHeaders.push({ key: 'Content-Type', value: requiredContentType });
+    }
+  }
+  
+  return newHeaders;
+};
+
+// Function to check if a header is auto-managed (cannot be deleted/edited)
+const isAutoManagedHeader = (headerKey, body) => {
+  const defaultHeaders = ['User-Agent', 'Cache-Control', 'Connection'];
+  const isDefaultHeader = defaultHeaders.includes(headerKey);
+  
+  // Content-Type is auto-managed when body has meaningful content
+  const isAutoContentType = headerKey.toLowerCase() === 'content-type' && body.type !== 'none' && (
+    (body.type === 'raw' && body.content?.trim()) ||
+    (body.type === 'formData' && body.formData?.some(item => item.key?.trim() || item.value?.trim())) ||
+    (body.type === 'urlencoded' && body.urlencoded?.some(item => item.key?.trim() || item.value?.trim()))
+  );
+  
+  return isDefaultHeader || isAutoContentType;
 };
 
 const JwtDecoder = () => {
@@ -621,7 +765,7 @@ const App = () => {
   const [dbTemplates, setDbTemplates] = useState([]);
   const [activeApiId, setActiveApiId] = useState(null);
   const [activeTab, setActiveTab] = useState('params');
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [openTabs, setOpenTabs] = React.useState([]);
   const [editingName, setEditingName] = useState(null);
   const [editingType, setEditingType] = useState(null);
@@ -1264,6 +1408,8 @@ const App = () => {
     }
   }, [collections, openTabs, activeApiId]);
 
+  // Note: Header management is now handled directly in fetchCollections to prevent race conditions
+
   const [isRenameModalOpen, setIsRenameModalOpen] = React.useState(false);
   const [itemToRename, setItemToRename] = React.useState(null);
   const [itemType, setItemType] = React.useState(null);
@@ -1441,7 +1587,7 @@ const [isOffline, setIsOffline] = useState(false);
           name: historyRequest.apiName || historyRequest.url.split('/').pop(),
           method: historyRequest.method,
           url: historyRequest.url,
-          headers: historyRequest.requestDetails?.headers || [],
+          headers: ensureApiHasDefaultHeaders(historyRequest.requestDetails?.headers || [], historyRequest.settings || {}),
           queryParams: historyRequest.requestDetails?.queryParams || [],
           body: historyRequest.requestDetails?.body || {},
           auth: historyRequest.requestDetails?.auth || { type: 'none' },
@@ -1741,7 +1887,7 @@ const FooterButton = ({ icon: Icon, label, onClick }) => (
         name: 'New Request',
         method: 'GET',
         url: "",
-        headers: [],
+        headers: getEnabledDefaultHeaders({}),
         queryParams: [],
         body: {
           type: "none",
@@ -1823,7 +1969,7 @@ const FooterButton = ({ icon: Icon, label, onClick }) => (
       name: 'New Request',
       method: 'GET',
       url: "",
-      headers: [],
+      headers: getEnabledDefaultHeaders({}),
       queryParams: [],
       body: {
         type: "none",
@@ -2128,7 +2274,10 @@ const renderApiItem = (folder, api, subfolderId = null) => {
             }`}>
               {api.method}
             </span>
-            <span className="truncate text-sm text-gray-700 dark:text-gray-300">
+            <span 
+              className="truncate text-sm text-gray-700 dark:text-gray-300"
+              title={api.url || 'No URL set'}
+            >
               {api.name}
             </span>
           </div>
@@ -2284,7 +2433,10 @@ const renderApiItem = (folder, api, subfolderId = null) => {
                             }`}>
                               {api.method}
                             </span>
-                            <span className="truncate text-sm text-gray-700 dark:text-gray-300">
+                            <span 
+                              className="truncate text-sm text-gray-700 dark:text-gray-300"
+                              title={api.url || 'No URL set'}
+                            >
                               {api.name}
                             </span>
                           </div>
@@ -3124,17 +3276,35 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
             const response = await fetch(`https://authrator.com/db-api/api/collections/${userId}`);
             const data = await response.json();
             if (data.success) {
-              // Make sure all collections have a default color and subfolders array if missing
+              // Make sure all collections have a default color, subfolders array, and default headers
               const collectionsWithColorsAndSubfolders = data.collections.map(collection => ({
                 ...collection,
                 color: collection.color || '#FF6B6B', // Ensure color exists with default
-                subfolders: collection.subfolders || [] // Ensure subfolders exists
+                subfolders: collection.subfolders || [], // Ensure subfolders exists
+                // Ensure all APIs have default headers
+                apis: (collection.apis || []).map(api => ({
+                  ...api,
+                  headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+                }))
               }));
-              setCollections(collectionsWithColorsAndSubfolders);
+              
+              // Also ensure subfolders have default headers
+              const collectionsWithHeaders = collectionsWithColorsAndSubfolders.map(collection => ({
+                ...collection,
+                subfolders: (collection.subfolders || []).map(subfolder => ({
+                  ...subfolder,
+                  apis: (subfolder.apis || []).map(api => ({
+                    ...api,
+                    headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+                  }))
+                }))
+              }));
+              
+              setCollections(collectionsWithHeaders);
 
               // Also save these to localStorage to handle refreshes better
               if (isElectron()) {
-                saveLocalCollections(collectionsWithColorsAndSubfolders);
+                saveLocalCollections(collectionsWithHeaders);
               }
             }
           } else {
@@ -3145,28 +3315,64 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
               saveLocalCollections([]);
               setCollections([]);
             } else {
-              // Make sure all collections have colors and subfolders
+              // Make sure all collections have colors, subfolders, and default headers
               const localCollectionsWithColorsAndSubfolders = localCollections.map(collection => ({
                 ...collection,
                 color: collection.color || '#FF6B6B',
-                subfolders: collection.subfolders || []
+                subfolders: collection.subfolders || [],
+                // Ensure all APIs have default headers
+                apis: (collection.apis || []).map(api => ({
+                  ...api,
+                  headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+                }))
               }));
-              setCollections(localCollectionsWithColorsAndSubfolders);
-              saveLocalCollections(localCollectionsWithColorsAndSubfolders);
+              
+              // Also ensure subfolders have default headers
+              const localCollectionsWithHeaders = localCollectionsWithColorsAndSubfolders.map(collection => ({
+                ...collection,
+                subfolders: (collection.subfolders || []).map(subfolder => ({
+                  ...subfolder,
+                  apis: (subfolder.apis || []).map(api => ({
+                    ...api,
+                    headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+                  }))
+                }))
+              }));
+              
+              setCollections(localCollectionsWithHeaders);
+              saveLocalCollections(localCollectionsWithHeaders);
             }
           }
         } catch (error) {
           console.error('Error fetching collections:', error);
           // Fallback to local collections on error
           const localCollections = getLocalCollections();
-          // Ensure colors and subfolders exist in fallback as well
+          // Ensure colors, subfolders, and headers exist in fallback as well
           const localCollectionsWithColorsAndSubfolders = (localCollections || []).map(collection => ({
             ...collection,
             color: collection.color || '#FF6B6B',
-            subfolders: collection.subfolders || []
+            subfolders: collection.subfolders || [],
+            // Ensure all APIs have default headers
+            apis: (collection.apis || []).map(api => ({
+              ...api,
+              headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+            }))
           }));
-          setCollections(localCollectionsWithColorsAndSubfolders);
-          saveLocalCollections(localCollectionsWithColorsAndSubfolders);
+          
+          // Also ensure subfolders have default headers
+          const localCollectionsWithHeaders = localCollectionsWithColorsAndSubfolders.map(collection => ({
+            ...collection,
+            subfolders: (collection.subfolders || []).map(subfolder => ({
+              ...subfolder,
+              apis: (subfolder.apis || []).map(api => ({
+                ...api,
+                headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+              }))
+            }))
+          }));
+          
+          setCollections(localCollectionsWithHeaders);
+          saveLocalCollections(localCollectionsWithHeaders);
                   }
           
           // For unauthorized users, create default tab after collections load
@@ -3409,7 +3615,7 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
           name: 'New Request',
           method: 'GET',
           url: "",
-          headers: [],
+          headers: getEnabledDefaultHeaders({}),
           queryParams: [],
           body: {
             type: "none",
@@ -3484,7 +3690,7 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
             name: 'New Request',
             method: 'GET',
             url: "",
-            headers: [],
+            headers: getEnabledDefaultHeaders({}),
             queryParams: [],
             body: {
               type: "none",
@@ -3550,7 +3756,7 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
             name: 'New Request',
             method: 'GET',
             url: "",
-            headers: [],
+            headers: getEnabledDefaultHeaders({}),
             queryParams: [],
             body: {
               type: "none",
@@ -3604,7 +3810,7 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
           name: 'New Request',
           method: 'GET',
           url: "",
-          headers: [],
+          headers: getEnabledDefaultHeaders({}),
           queryParams: [],
           body: {
             type: "none",
@@ -3656,7 +3862,7 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
           name: 'New Request',
           method: 'GET',
           url: "",
-          headers: [],
+          headers: getEnabledDefaultHeaders({}),
           queryParams: [],
           body: {
             type: "none",
@@ -3723,7 +3929,7 @@ const moveApiToSubfolder = async (apiId, sourceCollectionId, targetCollectionId,
             name: data.api.name,
             method: data.api.method,
             url: "",
-            headers: [],
+            headers: getEnabledDefaultHeaders({}),
             queryParams: [],
             body: {
               type: "none",
@@ -3777,14 +3983,43 @@ const loadLocalCollections = () => {
     const localCollections = getLocalCollections();
     if (localCollections.length > 0) {
       if (offline) {
-        // If offline, use only local collections
-        setCollections(localCollections);
+        // If offline, use only local collections but ensure they have default headers
+        const collectionsWithHeaders = localCollections.map(collection => ({
+          ...collection,
+          // Ensure all APIs have default headers
+          apis: (collection.apis || []).map(api => ({
+            ...api,
+            headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+          })),
+          // Also ensure subfolders have default headers
+          subfolders: (collection.subfolders || []).map(subfolder => ({
+            ...subfolder,
+            apis: (subfolder.apis || []).map(api => ({
+              ...api,
+              headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+            }))
+          }))
+        }));
+        setCollections(collectionsWithHeaders);
       } else if (collections.length > 0) {
         // If online and we already have collections, merge with local ones
-        // but mark local ones as offline
+        // but mark local ones as offline and ensure they have headers
         const markedLocalCollections = localCollections.map(collection => ({
           ...collection,
-          isOffline: true
+          isOffline: true,
+          // Ensure all APIs have default headers
+          apis: (collection.apis || []).map(api => ({
+            ...api,
+            headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+          })),
+          // Also ensure subfolders have default headers
+          subfolders: (collection.subfolders || []).map(subfolder => ({
+            ...subfolder,
+            apis: (subfolder.apis || []).map(api => ({
+              ...api,
+              headers: ensureApiHasDefaultHeaders(api.headers || [], api.settings || {})
+            }))
+          }))
         }));
         
         // Merge without duplicates
@@ -4346,43 +4581,63 @@ const getApiById = (apiId) => {
       [] // Empty dependency array since this function doesn't depend on any props or state
     );
   
-    const updateApiState = (folderId, apiId, updatedData) => {
-      // Update collections state - handle both direct APIs and subfolder APIs
-      const updatedCollections = collections.map((folder) => {
-        if (folder.id === folderId) {
-          // Update direct APIs in collection
-          const updatedDirectApis = folder.apis.map((api) =>
-            api.id === apiId ? { ...api, ...updatedData } : api
-          );
-          
-          // Update APIs in subfolders
-          const updatedSubfolders = (folder.subfolders || []).map(subfolder => ({
-            ...subfolder,
-            apis: subfolder.apis.map(api => 
-              api.id === apiId ? { ...api, ...updatedData } : api
-            )
-          }));
-          
-          return {
-            ...folder,
-            apis: updatedDirectApis,
-            subfolders: updatedSubfolders
-          };
-        }
-        return folder;
-      });
+      const updateApiState = (folderId, apiId, updatedData) => {
+    // Get current API to check for body changes
+    const currentApi = getActiveApi();
+    
+    // Process the updated data to handle Content-Type header management
+    let processedData = { ...updatedData };
+    
+    // If body is being updated, manage Content-Type header automatically
+    if (updatedData.body && currentApi) {
+      const currentHeaders = currentApi.headers || [];
+      const updatedBody = updatedData.body;
       
-      setCollections(updatedCollections);
-
-      // For anonymous users or offline mode, save to localStorage
-      if (!isLoggedIn || isElectronOffline()) {
-        saveLocalCollections(updatedCollections);
-        return;
+      // Manage Content-Type header based on body type and content
+      const managedHeaders = manageContentTypeHeader(currentHeaders, updatedBody);
+      
+      // Only update headers if they changed
+      if (JSON.stringify(managedHeaders) !== JSON.stringify(currentHeaders)) {
+        processedData.headers = managedHeaders;
       }
+    }
+    
+    // Update collections state - handle both direct APIs and subfolder APIs
+    const updatedCollections = collections.map((folder) => {
+      if (folder.id === folderId) {
+        // Update direct APIs in collection
+        const updatedDirectApis = folder.apis.map((api) =>
+          api.id === apiId ? { ...api, ...processedData } : api
+        );
+        
+        // Update APIs in subfolders
+        const updatedSubfolders = (folder.subfolders || []).map(subfolder => ({
+          ...subfolder,
+          apis: subfolder.apis.map(api => 
+            api.id === apiId ? { ...api, ...processedData } : api
+          )
+        }));
+        
+        return {
+          ...folder,
+          apis: updatedDirectApis,
+          subfolders: updatedSubfolders
+        };
+      }
+      return folder;
+    });
+    
+    setCollections(updatedCollections);
 
-      // Only call the API for logged-in users
-      debouncedUpdateApi(folderId, apiId, updatedData);
-    };
+    // For anonymous users or offline mode, save to localStorage
+    if (!isLoggedIn || isElectronOffline()) {
+      saveLocalCollections(updatedCollections);
+      return;
+    }
+
+    // Only call the API for logged-in users
+    debouncedUpdateApi(folderId, apiId, processedData);
+  };
   
     // Cleanup function to cancel any pending debounced calls
     useEffect(() => {
@@ -4395,14 +4650,21 @@ const getApiById = (apiId) => {
         const folder = collections.find(f => f.id === activeFolderId);
         if (!folder) return null;
         
+        let api = null;
+        
         // If we have an active subfolder, look in that subfolder
         if (activeSubfolderId) {
           const subfolder = folder.subfolders?.find(sf => sf.id === activeSubfolderId);
-          return subfolder?.apis.find(api => api.id === activeApiId);
+          api = subfolder?.apis.find(api => api.id === activeApiId);
+        } else {
+          // Otherwise, look in the direct APIs of the collection
+          api = folder.apis.find(api => api.id === activeApiId);
         }
         
-        // Otherwise, look in the direct APIs of the collection
-        return folder.apis.find(api => api.id === activeApiId);
+        // Only ensure default headers on API creation or when switching between APIs
+        // Don't auto-add headers if user has manually removed them in current session
+        
+        return api;
       };
     
       // Function to process environment variables in strings
@@ -4569,10 +4831,25 @@ const getApiById = (apiId) => {
             });
           } else if (api.auth.type === 'avq-jwt' && api.auth.avqJwt?.value) {
             proxyRequest.headers.push({
-              key: 'X-AVQ-AUTH',
+              key: 'Authorization',
               value: api.auth.avqJwt.value
             });
           }
+
+          // Only add default headers if they exist in the current API headers
+          // This respects manual deletion by users during the session
+          const currentApiHeaderKeys = api.headers.map(h => h.key.toLowerCase());
+          const proxyHeaderKeys = proxyRequest.headers.map(h => h.key.toLowerCase());
+          
+          // Add default headers only if they're present in the API's current headers
+          // (meaning user hasn't manually deleted them)
+          const enabledDefaults = getEnabledDefaultHeaders(api.settings);
+          enabledDefaults.forEach(defaultHeader => {
+            const headerKeyLower = defaultHeader.key.toLowerCase();
+            if (currentApiHeaderKeys.includes(headerKeyLower) && !proxyHeaderKeys.includes(headerKeyLower)) {
+              proxyRequest.headers.push(defaultHeader);
+            }
+          });
       
           // Check if we're in Electron offline mode but targeting a local address
           const isLocalRequest = isLocalAddress(api.url);
@@ -4598,9 +4875,13 @@ const getApiById = (apiId) => {
           // If we're offline but targeting a local address, make the request directly instead of through proxy
           if (shouldUseDirectRequest) {
             endpoint = api.url;
+            
+            // Merge the processed headers with default headers for direct requests
+            const directHeaders = Object.fromEntries(proxyRequest.headers.map(h => [h.key, h.value]));
+            
             requestOptions = {
               method: api.method,
-              headers: Object.fromEntries(api.headers.map(h => [h.key, h.value])),
+              headers: directHeaders,
               // Only add body for methods that support it
               ...((['POST', 'PUT', 'PATCH'].includes(api.method)) && {
                 body: getRequestBody(api.body)
@@ -4831,10 +5112,22 @@ const getApiById = (apiId) => {
                   ]
                 };
               } else if (networkError.message.includes('certificate') || 
-                         networkError.message.includes('SSL')) {
-                errorMessage = `SSL/TLS certificate error with ${api.url}. This often happens with self-signed certificates.`;
+                         networkError.message.includes('SSL') ||
+                         networkError.message.includes('CERT_') ||
+                         networkError.message.includes('TLS') ||
+                         networkError.message.includes('DEPTH_ZERO_SELF_SIGNED') ||
+                         networkError.message.includes('UNABLE_TO_VERIFY_LEAF_SIGNATURE')) {
+                errorMessage = `SSL/TLS certificate verification failed for ${api.url}. This usually happens with self-signed or untrusted certificates.`;
                 errorDetails = {
-                  suggestion: "For development, you can use http:// instead of https:// for local requests"
+                  suggestion: "You can disable SSL certificate verification for this request",
+                  possibleIssues: [
+                    "Self-signed certificate",
+                    "Untrusted certificate authority",
+                    "Certificate expired or invalid",
+                    "Hostname mismatch in certificate"
+                  ],
+                  sslError: true,
+                  canDisableSSL: api.settings?.sslVerification !== false
                 };
               }
             }
@@ -5974,6 +6267,39 @@ const ResponsePanel = ({ api }) => {
                   </pre>
                 </div>
               )}
+
+              {/* SSL Certificate Error Action */}
+              {api.responseData.errorDetails.sslError && api.responseData.errorDetails.canDisableSSL && (
+                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-2">
+                        SSL Certificate Verification Error
+                      </p>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-3">
+                        The SSL certificate for this server cannot be verified. You can disable SSL verification for this request to proceed.
+                      </p>
+                      <button
+                        onClick={() => {
+                          updateApiState(activeFolderId, activeApiId, {
+                            settings: { ...api.settings, sslVerification: false }
+                          });
+                          // Automatically retry the request after disabling SSL
+                          setTimeout(() => handleSend(), 500);
+                        }}
+                        className="inline-flex items-center px-3 py-2 bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600 text-white text-sm font-medium rounded-md transition-colors duration-200"
+                      >
+                        <ShieldCheck className="w-4 h-4 mr-2" />
+                        Disable SSL Verification & Retry
+                      </button>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
+                        ⚠️ Only disable SSL verification for trusted development/testing environments
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
@@ -6291,10 +6617,14 @@ const methodColors = {
             };
           }
 
-          // Update state and headers
+          // Update state and headers (ensuring no empty auth headers)
+          const updatedHeaders = updateHeadersWithAuth({...api, auth: updatedAuth});
+          // Remove any empty header entries
+          const cleanHeaders = updatedHeaders.filter(h => h.key || h.value);
+          
           updateApiState(folderId, apiId, {
             auth: updatedAuth,
-            headers: updateHeadersWithAuth({...api, auth: updatedAuth})
+            headers: cleanHeaders
           });
         };
 
@@ -6534,7 +6864,7 @@ const methodColors = {
           updateApiState(activeFolderId, activeApiId, {
             auth: updatedAuth,
             headers: api.headers.filter(h => 
-              !['Authorization', 'X-API-Key', 'X-AVQ-AUTH'].includes(h.key)
+              !['Authorization', 'X-API-Key'].includes(h.key)
             )
           });
 
@@ -6833,11 +7163,14 @@ const methodColors = {
         
 
 
+        // Use the global function for consistency
+        const ensureDefaultHeaders = (headers) => ensureApiHasDefaultHeaders(headers, api.settings);
+
         // Create a function to update headers with auth info
         const updateHeadersWithAuth = (api) => {
-          // Create a copy of current headers, excluding any existing auth headers
+          // Create a copy of current headers, excluding any existing auth headers and empty headers
           const headers = api.headers.filter(h => 
-            !['Authorization', 'X-API-Key', 'X-AVQ-AUTH'].includes(h.key)
+            !['Authorization', 'X-API-Key'].includes(h.key) && (h.key || h.value)
           );
           
           // Add the appropriate header based on auth type
@@ -6851,13 +7184,15 @@ const methodColors = {
                 
               case 'avq-jwt':
                 if (api.auth.avqJwt?.token) {
-                  headers.push({ key: 'X-AVQ-AUTH', value: `Bearer ${api.auth.avqJwt.token}` });
+                  // Changed from X-AVQ-AUTH to Authorization for consistency
+                  headers.push({ key: 'Authorization', value: `Bearer ${api.auth.avqJwt.token}` });
                 }
                 break;
             }
           }
           
-          return headers;
+          // Ensure all default headers are present
+          return ensureDefaultHeaders(headers);
         };
        
    return (
@@ -6891,8 +7226,8 @@ const methodColors = {
           }}
           placeholder="https://authrator.app/ping"
           onKeyDown={(e) => {
-            // Check if Ctrl+Enter or Cmd+Enter (for Mac) is pressed
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            // Check if Enter is pressed (with or without Ctrl/Cmd)
+            if (e.key === 'Enter') {
               handleSend();
             }
           }}
@@ -7611,41 +7946,70 @@ const methodColors = {
 
 {activeTab === 'headers' && (
   <div className="space-y-3">
-    {api.headers.map((header, index) => (
-      <div key={index} className="flex space-x-2">
-        <input
-          type="text"
-          placeholder="Key"
-          value={header.key}
-          onChange={(e) => {
-            const newHeaders = [...api.headers];
-            newHeaders[index].key = e.target.value;
-            updateApiState(activeFolderId, activeApiId, { headers: newHeaders });
-          }}
-          className="flex-1 px-3 py-2 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent"
-        />
-        <input
-          type="text"
-          placeholder="Value"
-          value={header.value}
-          onChange={(e) => {
-            const newHeaders = [...api.headers];
-            newHeaders[index].value = e.target.value;
-            updateApiState(activeFolderId, activeApiId, { headers: newHeaders });
-          }}
-          className="flex-1 px-3 py-2 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent"
-        />
-        <button
-          onClick={() => {
-            const newHeaders = api.headers.filter((_, i) => i !== index);
-            updateApiState(activeFolderId, activeApiId, { headers: newHeaders });
-          }}
-          className="p-2 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-150"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-    ))}
+    {api.headers.map((header, index) => {
+      const isAutoManaged = isAutoManagedHeader(header.key, api.body || { type: 'none', content: '' });
+      const isContentType = header.key.toLowerCase() === 'content-type';
+      const isDefaultHeader = ['User-Agent', 'Cache-Control', 'Connection'].includes(header.key);
+      
+      return (
+        <div key={index} className={`flex space-x-2 ${isAutoManaged ? 'bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg border border-purple-200 dark:border-purple-800' : ''}`}>
+          {isAutoManaged && (
+            <div className="flex items-center mr-2" title={isContentType ? "Auto-managed Content-Type Header" : "Default Header"}>
+              <div className={`w-2 h-2 rounded-full ${isContentType ? 'bg-blue-500' : 'bg-purple-500'}`}></div>
+            </div>
+          )}
+          <input
+            type="text"
+            placeholder="Key"
+            value={header.key}
+            onChange={(e) => {
+              const newHeaders = [...api.headers];
+              newHeaders[index].key = e.target.value;
+              updateApiState(activeFolderId, activeApiId, { headers: newHeaders });
+            }}
+            className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent ${
+              isAutoManaged 
+                ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700' 
+                : 'bg-white dark:bg-zinc-900 border-gray-300 dark:border-gray-600'
+            }`}
+            readOnly={isAutoManaged}
+          />
+          <input
+            type="text"
+            placeholder="Value"
+            value={header.value}
+            onChange={(e) => {
+              const newHeaders = [...api.headers];
+              newHeaders[index].value = e.target.value;
+              updateApiState(activeFolderId, activeApiId, { headers: newHeaders });
+            }}
+            className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent ${
+              isAutoManaged 
+                ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700' 
+                : 'bg-white dark:bg-zinc-900 border-gray-300 dark:border-gray-600'
+            }`}
+            readOnly={isContentType && api.body?.type !== 'none' && api.body?.content?.trim()}
+          />
+          {!isAutoManaged && (
+          <button
+            onClick={() => {
+              const newHeaders = api.headers.filter((_, i) => i !== index);
+              updateApiState(activeFolderId, activeApiId, { headers: newHeaders });
+            }}
+              className="p-2 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-150"
+              title="Remove header"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          )}
+          {isAutoManaged && (
+            <div className="p-2 text-gray-300 dark:text-gray-600" title={isContentType ? "Auto-managed header - will be removed when body is cleared" : "Predefined headers cannot be deleted"}>
+              <X className="w-5 h-5 opacity-30" />
+            </div>
+          )}
+        </div>
+      );
+    })}
     <button
       onClick={() => updateApiState(activeFolderId, activeApiId, {
         headers: [...api.headers, { key: '', value: '' }]
@@ -7717,6 +8081,88 @@ const methodColors = {
               min="0"
             />
             <span className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-md">ms</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Default Headers Settings */}
+    <div className="group">
+      <div className="flex items-center space-x-2 mb-4">
+        <div className="w-1 h-5 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full"></div>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Default Headers</h3>
+      </div>
+      
+      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 hover:shadow-md transition-shadow duration-200">
+        <div className="flex items-center justify-between py-1.5">
+          <div className="pl-2">
+            <div className="flex items-center space-x-2.5">
+              <input
+                type="checkbox"
+                id="enableUserAgent"
+                checked={api.settings?.enableUserAgent !== false}
+                onChange={(e) => {
+                  const newSettings = { ...api.settings, enableUserAgent: e.target.checked };
+                  updateApiState(activeFolderId, activeApiId, { settings: newSettings });
+                  // Also save to global localStorage for future API creation
+                  const globalSettings = loadDefaultHeaderSettings();
+                  saveDefaultHeaderSettings({ ...globalSettings, enableUserAgent: e.target.checked });
+                }}
+                className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 accent-purple-600"
+              />
+              <label htmlFor="enableUserAgent" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                User-Agent Header
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 pl-6 mt-1">Adds "User-Agent: Authrator-Client" to requests</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-1.5 border-t border-gray-100 dark:border-gray-700">
+          <div className="pl-2">
+            <div className="flex items-center space-x-2.5">
+              <input
+                type="checkbox"
+                id="enableCacheControl"
+                checked={api.settings?.enableCacheControl !== false}
+                onChange={(e) => {
+                  const newSettings = { ...api.settings, enableCacheControl: e.target.checked };
+                  updateApiState(activeFolderId, activeApiId, { settings: newSettings });
+                  // Also save to global localStorage for future API creation
+                  const globalSettings = loadDefaultHeaderSettings();
+                  saveDefaultHeaderSettings({ ...globalSettings, enableCacheControl: e.target.checked });
+                }}
+                className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 accent-purple-600"
+              />
+              <label htmlFor="enableCacheControl" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Cache-Control Header
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 pl-6 mt-1">Adds "Cache-Control: no-cache" to prevent caching</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-1.5 border-t border-gray-100 dark:border-gray-700">
+          <div className="pl-2">
+            <div className="flex items-center space-x-2.5">
+              <input
+                type="checkbox"
+                id="enableConnection"
+                checked={api.settings?.enableConnection !== false}
+                onChange={(e) => {
+                  const newSettings = { ...api.settings, enableConnection: e.target.checked };
+                  updateApiState(activeFolderId, activeApiId, { settings: newSettings });
+                  // Also save to global localStorage for future API creation
+                  const globalSettings = loadDefaultHeaderSettings();
+                  saveDefaultHeaderSettings({ ...globalSettings, enableConnection: e.target.checked });
+                }}
+                className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 accent-purple-600"
+              />
+              <label htmlFor="enableConnection" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Connection Keep-Alive Header
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 pl-6 mt-1">Adds "Connection: keep-alive" for faster requests</p>
           </div>
         </div>
       </div>
@@ -7979,14 +8425,132 @@ const methodColors = {
     </select>
 
     {api.body.type === 'raw' && (
+      <div className="space-y-3">
+        {/* Format Selection Dropdown */}
+        <div className="flex items-center space-x-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Format:</label>
+          <select
+            value={api.body.rawFormat || 'json'}
+            onChange={(e) => updateApiState(activeFolderId, activeApiId, {
+              body: { ...api.body, rawFormat: e.target.value }
+            })}
+            className="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent"
+          >
+            <option value="json">JSON</option>
+            <option value="text">Text</option>
+            <option value="xml">XML</option>
+          </select>
+        </div>
+
+        {/* Enhanced Raw Body Editor */}
+        <div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
+          {(api.body.rawFormat || 'json') === 'json' ? (
+            <div className="relative">
+              {/* JSON Editor with highlighting */}
+              <div className="bg-white dark:bg-zinc-900">
+                <textarea
+                  value={api.body.content}
+                  onChange={(e) => {
+                    updateApiState(activeFolderId, activeApiId, {
+                      body: { ...api.body, content: e.target.value }
+                    });
+                  }}
+                  placeholder={`{
+  "key": "value",
+  "number": 123,
+  "boolean": true,
+  "array": [1, 2, 3],
+  "nested": {
+    "property": "value"
+  }
+}`}
+                  className="w-full h-64 px-4 py-3 bg-transparent text-sm font-mono focus:outline-none resize-none"
+                  style={{
+                    lineHeight: '1.5',
+                    tabSize: 2,
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
+                  }}
+                />
+              </div>
+              
+              {/* JSON Preview (if valid JSON) */}
+              {api.body.content && (() => {
+                try {
+                  const parsedJson = JSON.parse(api.body.content);
+                  return (
+                    <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-zinc-800 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">JSON Preview</span>
+                        <button
+                          onClick={() => {
+                            try {
+                              const formatted = JSON.stringify(parsedJson, null, 2);
+                              updateApiState(activeFolderId, activeApiId, {
+                                body: { ...api.body, content: formatted }
+                              });
+                            } catch (e) {
+                              // Handle formatting error
+                            }
+                          }}
+                          className="px-2 py-1 text-xs bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-300 rounded"
+                        >
+                          Format JSON
+                        </button>
+                      </div>
+                      <div className="max-h-32 overflow-auto">
+                        <EnhancedJsonViewer data={parsedJson} />
+                      </div>
+                    </div>
+                  );
+                } catch (e) {
+                  if (api.body.content.trim()) {
+                    return (
+                      <div className="border-t border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-xs text-red-600 dark:text-red-400">Invalid JSON: {e.message}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }
+              })()}
+            </div>
+          ) : (
+            /* Text/XML Editor */
       <textarea
         value={api.body.content}
         onChange={(e) => updateApiState(activeFolderId, activeApiId, {
           body: { ...api.body, content: e.target.value }
         })}
-        placeholder="Enter raw body (JSON, XML, etc.)"
-        className="w-full h-64 px-3 py-2 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent"
-      />
+              placeholder={
+                (api.body.rawFormat || 'json') === 'xml' 
+                  ? '<?xml version="1.0" encoding="UTF-8"?>\n<root>\n  <element>value</element>\n</root>'
+                  : 'Enter raw text content here...'
+              }
+              className="w-full h-64 px-4 py-3 bg-white dark:bg-zinc-900 text-sm font-mono focus:outline-none resize-none"
+              style={{
+                lineHeight: '1.5',
+                tabSize: 2,
+                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
+              }}
+            />
+          )}
+        </div>
+        
+        {/* Body Stats */}
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
+          <span>
+            {api.body.content ? `${api.body.content.length} characters` : 'No content'}
+          </span>
+          {api.body.content && (
+            <span>
+              {api.body.content.split('\n').length} lines
+            </span>
+          )}
+        </div>
+      </div>
     )}
 
     {api.body.type === 'formData' && (
@@ -8271,9 +8835,8 @@ return (
               {isDarkMode ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-purple-400" />}
             </button>
             {isElectronOffline() && (
-              <div className="ml-2 inline-flex items-center px-2.5 py-1.5 rounded-md text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                <Wifi className="w-4 h-4 mr-1 text-yellow-800 dark:text-yellow-200" />
-                Offline
+              <div className="ml-2 inline-flex items-center p-1.5 rounded-md">
+                <WifiOff className="w-4 h-4 text-yellow-600 dark:text-yellow-400" title="Offline Mode" />
               </div>
             )}
             {!isElectronOffline() && isLoggedIn && (

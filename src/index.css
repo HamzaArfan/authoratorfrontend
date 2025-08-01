@@ -2,6 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced JSON Viewer Styles - Postman-like appearance */
+.enhanced-json-viewer {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  background: #fafafa;
+  color: #2d3748;
+}
+
+.dark .enhanced-json-viewer {
+  background: #1a1a1a;
+  color: #e2e8f0;
+}
+
+.json-line-numbers {
+  background: #f7fafc;
+  border-right: 1px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  user-select: none;
+  min-width: 3rem;
+  text-align: right;
+}
+
+.dark .json-line-numbers {
+  background: #2d3748;
+  border-right: 1px solid #4a5568;
+  color: #a0aec0;
+}
+
+.json-line-number {
+  height: 1.5rem;
+  line-height: 1.5rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.dark .json-line-number {
+  color: #6b7280;
+}
+
+.json-collapse-control {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0.125rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.15s ease;
+}
+
+.json-collapse-control:hover {
+  background-color: #f3f4f6;
+}
+
+.dark .json-collapse-control:hover {
+  background-color: #374151;
+}
+
+.json-guide-line {
+  position: absolute;
+  width: 1px;
+  background-color: #e5e7eb;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.dark .json-guide-line {
+  background-color: #4b5563;
+}
+
 @font-face {
   font-family: 'Motter Tektura';
   src: url('../assets/Motter Tektura Normal.ttf') format('truetype');

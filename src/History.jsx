@@ -269,17 +269,11 @@ const RequestHistoryPanel = ({ collections = [], openRequestInTab }) => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold dark:text-white">Request History</h2>
           {isElectron() && (
-            <div className={`flex items-center px-2 py-1 rounded-md text-xs ${isOffline ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'}`}>
+            <div className="flex items-center p-1 rounded-md">
               {isOffline ? (
-                <>
-                  <WifiOff className="w-3 h-3 mr-1" />
-                  <span>Offline Mode</span>
-                </>
+                <WifiOff className="w-4 h-4 text-yellow-600 dark:text-yellow-400" title="Offline Mode" />
               ) : (
-                <>
-                  <Wifi className="w-3 h-3 mr-1" />
-                  <span>Online</span>
-                </>
+                <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" title="Online" />
               )}
             </div>
           )}
@@ -391,10 +385,7 @@ const RequestHistoryPanel = ({ collections = [], openRequestInTab }) => {
                 {request?.isOffline && (
                   <>
                     <span className="mx-2">•</span>
-                    <span className="text-amber-600 dark:text-amber-400 flex items-center">
-                      <WifiOff className="w-3 h-3 mr-1" />
-                      Offline Request
-                    </span>
+                    <WifiOff className="w-3 h-3 text-amber-600 dark:text-amber-400" title="Offline Request" />
                   </>
                 )}
               </div>
